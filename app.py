@@ -1,6 +1,12 @@
 from flask import Flask, render_template
+from database.db import get_db, init_db, seed_db
 
 app = Flask(__name__)
+
+# Initialize database on startup
+with app.app_context():
+    init_db()
+    seed_db()
 
 
 # ------------------------------------------------------------------ #
@@ -20,6 +26,16 @@ def register():
 @app.route("/login")
 def login():
     return render_template("login.html")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
 
 
 # ------------------------------------------------------------------ #
@@ -52,4 +68,4 @@ def delete_expense(id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5000)
