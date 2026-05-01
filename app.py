@@ -1,6 +1,6 @@
 import secrets
 from flask import Flask, render_template, request, session, flash, redirect, url_for
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import get_db, init_db, seed_db
 
 app = Flask(__name__)
@@ -23,6 +23,10 @@ def landing():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    # Redirect if already logged in
+    if session.get("user_id"):
+        return redirect(url_for("landing"))
+
     if request.method == "POST":
         # Validate CSRF token
         form_token = request.form.get("csrf_token")
@@ -85,9 +89,56 @@ def register():
     return render_template("register.html", csrf_token=session["csrf_token"])
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    return render_template("login.html")
+    # Redirect if already logged in
+    if session.get("user_id"):
+        return redirect(url_for("landing"))
+
+    if request.method == "POST":
+        # Validate CSRF token
+        form_token = request.form.get("csrf_token")
+        session_token = session.get("csrf_token")
+        if not form_token or not session_token or form_token != session_token:
+            flash("Invalid request. Please try again.", "error")
+            return redirect(url_for("login"))
+
+        # Extract form fields
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+
+        # Validation: all fields required
+        if not email or not password:
+            flash("Please enter both email and password.", "error")
+            return redirect(url_for("login"))
+
+        # Validation: email format
+        if "@" not in email or "." not in email.split("@")[-1]:
+            flash("Please enter a valid email address.", "error")
+            return redirect(url_for("login"))
+
+        # Query database for user
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, password_hash FROM users WHERE email = ?", (email,))
+        user = cursor.fetchone()
+        conn.close()
+
+        # Check if user exists and password is correct
+        if not user or not check_password_hash(user[1], password):
+            flash("Invalid email or password.", "error")
+            return redirect(url_for("login"))
+
+        # Successful login: store user_id in session
+        session["user_id"] = user[0]
+        flash("Successfully signed in!", "success")
+        return redirect(url_for("landing"))
+
+    # GET request: generate CSRF token if not present
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+
+    return render_template("login.html", csrf_token=session["csrf_token"])
 
 
 @app.route("/terms")
@@ -106,7 +157,9 @@ def privacy():
 
 @app.route("/logout")
 def logout():
-    return "Logout — coming in Step 3"
+    session.clear()
+    flash("You have been signed out.", "success")
+    return redirect(url_for("landing"))
 
 
 @app.route("/profile")
@@ -130,4 +183,4 @@ def delete_expense(id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5002)
