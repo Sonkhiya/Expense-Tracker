@@ -25,7 +25,7 @@ def landing():
 def register():
     # Redirect if already logged in
     if session.get("user_id"):
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     if request.method == "POST":
         # Validate CSRF token
@@ -93,7 +93,7 @@ def register():
 def login():
     # Redirect if already logged in
     if session.get("user_id"):
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     if request.method == "POST":
         # Validate CSRF token
@@ -132,7 +132,7 @@ def login():
         # Successful login: store user_id in session
         session["user_id"] = user[0]
         flash("Successfully signed in!", "success")
-        return redirect(url_for("landing"))
+        return redirect(url_for("profile"))
 
     # GET request: generate CSRF token if not present
     if "csrf_token" not in session:
@@ -164,7 +164,39 @@ def logout():
 
 @app.route("/profile")
 def profile():
-    return "Profile page — coming in Step 4"
+    # Authentication guard
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    # Hardcoded context data for UI design
+    context = {
+        "user": {
+            "name": "Demo User",
+            "email": "demo@spendly.com",
+            "member_since": "January 15, 2024",
+            "initials": "DU"
+        },
+        "stats": {
+            "total_spent": "₹12,450.00",
+            "transaction_count": 24,
+            "top_category": "Food"
+        },
+        "transactions": [
+            {"date": "2024-01-28", "description": "Grocery shopping", "category": "Food", "amount": "₹2,450.00"},
+            {"date": "2024-01-27", "description": "Uber ride", "category": "Transport", "amount": "₹350.00"},
+            {"date": "2024-01-26", "description": "Electricity bill", "category": "Bills", "amount": "₹1,200.00"},
+            {"date": "2024-01-25", "description": "Movie tickets", "category": "Entertainment", "amount": "₹800.00"},
+            {"date": "2024-01-24", "description": "Online shopping", "category": "Shopping", "amount": "₹1,500.00"}
+        ],
+        "categories": [
+            {"name": "Food", "amount": "₹5,200.00", "percentage": 42},
+            {"name": "Transport", "amount": "₹3,100.00", "percentage": 25},
+            {"name": "Bills", "amount": "₹2,800.00", "percentage": 22},
+            {"name": "Entertainment", "amount": "₹1,350.00", "percentage": 11}
+        ]
+    }
+
+    return render_template("profile.html", **context)
 
 
 @app.route("/expenses/add")
