@@ -20,6 +20,24 @@
         </div>
     </div>
 
+    <!-- Date Filter Bar -->
+    <div class="date-filter-bar">
+        <div class="date-filter-presets">
+            <button type="button" class="preset-btn" data-preset="this-month">This Month</button>
+            <button type="button" class="preset-btn" data-preset="last-month">Last Month</button>
+            <button type="button" class="preset-btn" data-preset="this-year">This Year</button>
+            <button type="button" class="preset-btn" data-preset="all-time">All Time</button>
+        </div>
+        <div class="date-filter-custom">
+            <label for="start-date" class="visually-hidden">Start Date</label>
+            <input type="date" id="start-date" name="start_date" value="{{ start_date }}">
+            <span class="date-separator">to</span>
+            <label for="end-date" class="visually-hidden">End Date</label>
+            <input type="date" id="end-date" name="end_date" value="{{ end_date }}">
+            <button type="button" class="btn-primary" id="apply-date-btn">Apply</button>
+        </div>
+    </div>
+
     <!-- Summary Stats Row -->
     <div class="stats-row">
         <div class="stat-card">
@@ -76,12 +94,81 @@
                     <span class="category-amount">{{ category.amount }}</span>
                 </div>
                 <div class="category-progress">
-                    <div class="progress-bar" style="width: {{ category.percentage }}%"></div>
+                    <div class="progress-bar" style="width: {{ category.pct }}%"></div>
                 </div>
-                <div class="category-percentage">{{ category.percentage }}%</div>
+                <div class="category-percentage">{{ category.pct }}%</div>
+            </div>
+            {% else %}
+            <div class="category-item" style="text-align: center; color: var(--ink-muted);">
+                No expenses in selected period
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+        const applyBtn = document.getElementById('apply-date-btn');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+
+        function setPresetDates(preset) {
+            const today = new Date();
+            let start, end;
+
+            switch (preset) {
+                case 'this-month':
+                    start = new Date(today.getFullYear(), today.getMonth(), 1);
+                    end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    break;
+                case 'last-month':
+                    start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    end = new Date(today.getFullYear(), today.getMonth(), 0);
+                    break;
+                case 'this-year':
+                    start = new Date(today.getFullYear(), 0, 1);
+                    end = new Date(today.getFullYear(), 11, 31);
+                    break;
+                case 'all-time':
+                    window.location.href = '/profile';
+                    return;
+            }
+
+            const startStr = start.toISOString().split('T')[0];
+            const endStr = end.toISOString().split('T')[0];
+            window.location.href = `/profile?start_date=${startStr}&end_date=${endStr}`;
+        }
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => setPresetDates(btn.dataset.preset));
+        });
+
+        applyBtn.addEventListener('click', () => {
+            const start = startDateInput.value;
+            const end = endDateInput.value;
+            if (!start && !end) {
+                window.location.href = '/profile';
+            } else if (start && end) {
+                window.location.href = `/profile?start_date=${start}&end_date=${end}`;
+            } else if (start) {
+                window.location.href = `/profile?start_date=${start}`;
+            } else if (end) {
+                window.location.href = `/profile?end_date=${end}`;
+            }
+        });
+
+        // Also allow Enter key on date inputs
+        [startDateInput, endDateInput].forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    applyBtn.click();
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
